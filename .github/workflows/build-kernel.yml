@@ -71,18 +71,11 @@ jobs:
       - name: Build Image
         run: |
           set -euo pipefail
-          # PGO profiles and symbol ordering live in vendor/hisi, which is not
-          # part of this repository. Drop only those optimization flags; the
-          # kernel remains fully functional without PGO.
-          sed -i '/^KBUILD_CFLAGS += -fprofile-use/d' Makefile
-          sed -i '/^KBUILD_LDFLAGS += --symbol-ordering-file/d' Makefile
+          sed -i '744,767d' Makefile
           sed -i 's#-I$(srctree)/../../vendor/hisi/ap/kernel/include##g' \
             platform_source/display/drivers/dpu_drm/Makefile \
             platform_source/display/drivers/dpu_drm/heap/Makefile || true
-          if grep -n "fprofile-use\|symbol-ordering" Makefile; then
-            echo "vendor PGO flags still present" >&2
-            exit 1
-          fi
+          grep -n 'fprofile-use\|symbol-ordering' Makefile && exit 1 || true
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
