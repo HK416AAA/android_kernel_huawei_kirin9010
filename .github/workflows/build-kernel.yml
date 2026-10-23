@@ -1,0 +1,73 @@
+name: build-kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/build-kernel.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Fetch toolchain
+        run: |
+          set -euo pipefail
+          git clone --depth 1 \
+            https://github.com/HK416AAA/aarch64-linux-android-4.9.git gcc
+          mkdir -p "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
+          git clone --depth 1 --filter=blob:none --sparse \
+            --branch android-12.0.0_r1 \
+            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
+            "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
+          git -C "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86" \
+            sparse-checkout set clang-r416183b1
+          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin/clang"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
+            device-tree-compiler ccache
+
+      - name: Build Image
+        run: |
+          set -o pipefail
+          export ARCH=arm64
+          export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
+          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+          export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
+          export CCACHE_COMPILERCHECK=content
+          export CCACHE_MAXSIZE=5G
+          mkdir -p out
+          make O=out merge_8425m_defconfig 2>&1 | tee out/build.log
+          make O=out -j"$(nproc)" CC="ccache clang" HOSTCC="ccache clang" \
+            Image 2>&1 | tee -a out/build.log
+          test -s out/arch/arm64/boot/Image
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel
+          path: |
+            out/arch/arm64/boot/Image
+            out/System.map
+            out/.config
+            out/build.log
+          if-no-files-found: warn
