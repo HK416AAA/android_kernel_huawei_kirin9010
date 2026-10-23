@@ -71,6 +71,12 @@ jobs:
       - name: Build Image
         run: |
           set -o pipefail
+          # Only repository sources are used; drop vendor/hisi PGO and the
+          # display vendor include that are not part of this repo.
+          sed -i '/-fprofile-use=/d' Makefile
+          sed -i 's#-I$(srctree)/../../vendor/hisi/ap/kernel/include##g' \
+            platform_source/display/drivers/dpu_drm/Makefile \
+            platform_source/display/drivers/dpu_drm/heap/Makefile
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
