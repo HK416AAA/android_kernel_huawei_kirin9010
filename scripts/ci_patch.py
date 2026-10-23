@@ -21,16 +21,31 @@ def patch_defconfig() -> None:
     path.write_text("\n".join(out) + "\n")
 
 
-def patch_makefile() -> None:
-    path = Path("Makefile")
-    lines = path.read_text().splitlines()
-    keep = [
-        line for line in lines
-        if "-fprofile-use" not in line
-        and "--symbol-ordering-file" not in line
-    ]
-    path.write_text("\n".join(keep) + "\n")
-    print("Makefile lines removed:", len(lines) - len(keep))
+def patch_all_makefiles() -> None:
+    changed = 0
+    for path in Path(".").rglob("*"):
+        if not path.is_file():
+            continue
+        if not (path.name == "Makefile" or path.name == "Kbuild"
+                or path.name.startswith("Makefile.")
+                or path.suffix == ".mk"):
+            continue
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        if "-fprofile-use" not in text and "--symbol-ordering-file" not in text:
+            continue
+        lines = text.splitlines()
+        keep = [
+            line for line in lines
+            if "-fprofile-use" not in line
+            and "--symbol-ordering-file" not in line
+        ]
+        path.write_text("\n".join(keep) + "\n")
+        changed += 1
+        print("patched", path)
+    print("patched files:", changed)
 
 
 def patch_display() -> None:
@@ -40,12 +55,11 @@ def patch_display() -> None:
     ):
         path = Path(name)
         if path.exists():
-            text = path.read_text().replace(
-                "-I$(srctree)/../../vendor/hisi/ap/kernel/include", "")
-            path.write_text(text)
+            path.write_text(path.read_text().replace(
+                "-I$(srctree)/../../vendor/hisi/ap/kernel/include", ""))
 
 
 if __name__ == "__main__":
     patch_defconfig()
-    patch_makefile()
+    patch_all_makefiles()
     patch_display()
