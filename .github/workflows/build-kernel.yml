@@ -56,17 +56,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache
-          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}
+          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}-v2
           restore-keys: |
             kirin9010-ccache-
-
-      - name: Cache build output
-        uses: actions/cache@v4
-        with:
-          path: out
-          key: kirin9010-out-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}
-          restore-keys: |
-            kirin9010-out-
 
       - name: Patch repo-only config
         run: python3 scripts/ci_patch.py
@@ -74,6 +66,7 @@ jobs:
       - name: Build Image
         run: |
           set -euo pipefail
+          rm -rf out
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
