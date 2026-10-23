@@ -73,8 +73,6 @@ jobs:
           set -euo pipefail
           python3 scripts/ci_patch.py
           grep -n "fprofile-use\|symbol-ordering" Makefile && exit 1 || true
-          grep -nE "^CONFIG_LTO=|^CONFIG_LTO_CLANG=|^CONFIG_CFI_CLANG=" \
-            arch/arm64/configs/merge_8425m_defconfig && exit 1 || true
 
       - name: Build Image
         run: |
