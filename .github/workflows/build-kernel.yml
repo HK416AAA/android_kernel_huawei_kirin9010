@@ -71,13 +71,12 @@ jobs:
       - name: Build Image
         run: |
           set -o pipefail
-          # Only repository sources are used. Remove vendor/hisi PGO/profile
-          # flags and the display vendor include, which are not in this repo.
-          sed -i '/fprofile-use/d' Makefile
+          # Repo-only build: strip vendor/hisi PGO and symbol-order paths.
+          sed -i 's#-fprofile-use=[^ ]*##g; s#--symbol-ordering-file=[^ ]*##g' Makefile
           sed -i 's#-I$(srctree)/../../vendor/hisi/ap/kernel/include##g' \
             platform_source/display/drivers/dpu_drm/Makefile \
             platform_source/display/drivers/dpu_drm/heap/Makefile || true
-          grep -n "fprofile" Makefile || true
+          grep -n "fprofile-use\|symbol-ordering" Makefile || true
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
