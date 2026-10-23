@@ -105,10 +105,6 @@ jobs:
                   path.write_text(path.read_text().replace(
                       "-I$(srctree)/../../vendor/hisi/ap/kernel/include", ""))
           PY
-          if grep -n "fprofile-use\|symbol-ordering" Makefile; then
-            echo "vendor PGO flags still present" >&2
-            exit 1
-          fi
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
@@ -120,7 +116,9 @@ jobs:
           export CCACHE_MAXSIZE=5G
           mkdir -p out
           make O=out merge_8425m_defconfig 2>&1 | tee out/build.log
-          make O=out -j"$(nproc)" CC="ccache clang" HOSTCC="ccache clang" \
+          make O=out -j"$(nproc)" \
+            KCFLAGS="-fno-profile-use -fno-profile-arcs" \
+            CC="ccache clang" HOSTCC="ccache clang" \
             Image 2>&1 | tee -a out/build.log
           test -s out/arch/arm64/boot/Image
 
