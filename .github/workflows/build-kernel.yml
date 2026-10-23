@@ -68,43 +68,17 @@ jobs:
           restore-keys: |
             kirin9010-out-
 
+      - name: Patch repo-only config
+        run: |
+          set -euo pipefail
+          python3 scripts/ci_patch.py
+          grep -n "fprofile-use\|symbol-ordering" Makefile && exit 1 || true
+          grep -nE "^CONFIG_LTO=|^CONFIG_LTO_CLANG=|^CONFIG_CFI_CLANG=" \
+            arch/arm64/configs/merge_8425m_defconfig && exit 1 || true
+
       - name: Build Image
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          defconfig = Path("arch/arm64/configs/merge_8425m_defconfig")
-          lines = defconfig.read_text().splitlines()
-          out = []
-          for line in lines:
-              if line.startswith(("CONFIG_LTO=", "CONFIG_LTO_CLANG=",
-                                  "CONFIG_LTO_CLANG_FULL=",
-                                  "CONFIG_CFI_CLANG=",
-                                  "CONFIG_CFI_CLANG_SHADOW=")):
-                  out.append("# " + line.split("=", 1)[0] + " is not set")
-              elif line.startswith("# CONFIG_LTO_NONE"):
-                  out.append("CONFIG_LTO_NONE=y")
-              else:
-                  out.append(line)
-          defconfig.write_text("\n".join(out) + "\n")
-
-          makefile = Path("Makefile")
-          lines = makefile.read_text().splitlines()
-          keep = [line for line in lines
-                  if "-fprofile-use" not in line
-                  and "--symbol-ordering-file" not in line]
-          makefile.write_text("\n".join(keep) + "\n")
-          print("Makefile lines removed:", len(lines) - len(keep))
-          PY
-          python3 - <<'PY'
-          from pathlib import Path
-          for name in ("platform_source/display/drivers/dpu_drm/Makefile",
-                       "platform_source/display/drivers/dpu_drm/heap/Makefile"):
-              path = Path(name)
-              if path.exists():
-                  path.write_text(path.read_text().replace(
-                      "-I$(srctree)/../../vendor/hisi/ap/kernel/include", ""))
-          PY
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
@@ -116,10 +90,7 @@ jobs:
           export CCACHE_MAXSIZE=5G
           mkdir -p out
           make O=out merge_8425m_defconfig 2>&1 | tee out/build.log
-          make O=out -j"$(nproc)" \
-            KBUILD_CFLAGS="-fno-profile-use" \
-            KCFLAGS="-fno-profile-use" \
-            CC="ccache clang" HOSTCC="ccache clang" \
+          make O=out -j"$(nproc)" CC="ccache clang" HOSTCC="ccache clang" \
             Image 2>&1 | tee -a out/build.log
           test -s out/arch/arm64/boot/Image
 
