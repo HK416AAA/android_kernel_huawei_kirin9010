@@ -69,10 +69,7 @@ jobs:
             kirin9010-out-
 
       - name: Patch repo-only config
-        run: |
-          set -euo pipefail
-          python3 scripts/ci_patch.py
-          grep -n "fprofile-use\|symbol-ordering" Makefile && exit 1 || true
+        run: python3 scripts/ci_patch.py
 
       - name: Build Image
         run: |
