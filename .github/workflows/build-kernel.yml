@@ -22,7 +22,17 @@ jobs:
             /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           df -h /
 
+      - name: Cache toolchain
+        id: toolchain-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            gcc
+            ${{ github.workspace }}/../../prebuilts
+          key: kirin9010-toolchain-v1
+
       - name: Fetch toolchain
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           git clone --depth 1 \
@@ -41,6 +51,22 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
             device-tree-compiler ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}
+          restore-keys: |
+            kirin9010-ccache-
+
+      - name: Cache build output
+        uses: actions/cache@v4
+        with:
+          path: out
+          key: kirin9010-out-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}
+          restore-keys: |
+            kirin9010-out-
 
       - name: Build Image
         run: |
