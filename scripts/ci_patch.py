@@ -49,12 +49,11 @@ def patch_pgo() -> None:
 
 def patch_warnings() -> None:
     path = Path("Makefile")
-    text = path.read_text()
-    if "KBUILD_CFLAGS += -Wno-error\n" in text:
+    lines = path.read_text().splitlines()
+    if any(line.strip() == "KBUILD_CFLAGS += -Wno-error" for line in lines):
         return
-    text = text.rstrip() + "\n\n" + WARN_OVERRIDES
-    path.write_text(text)
-    print("added global -Wno-error overrides")
+    path.write_text(WARN_OVERRIDES + "\n" + "\n".join(lines) + "\n")
+    print("prefixed global -Wno-error overrides")
 
 
 def patch_defconfig() -> None:
