@@ -1,10 +1,14 @@
 from pathlib import Path
 
 CLANG = "clang-r487747c"
-WARN_OVERRIDES = (
-    "KBUILD_CFLAGS += -Wno-error\n"
-    "KBUILD_CFLAGS += -Wno-error=strict-prototypes "
-    "-Wno-error=int-conversion -Wno-error=implicit-int\n"
+MISSING_SUBTREES = (
+    "platform_source/cee/drivers/heca",
+    "platform_source/cee/drivers/pm/main",
+    "platform_source/see/drivers/bl31_hibernate",
+    "platform_source/see/drivers/hhee",
+    "platform_source/basicplatform/drivers/rpmb",
+    "platform_source/audio/drivers/hifi_dsp",
+    "platform_source/basicplatform/drivers/clk/extreme/platform",
 )
 
 
@@ -47,12 +51,35 @@ def patch_pgo() -> None:
         print("removed PGO:", path)
 
 
+def patch_missing_subtrees() -> None:
+    for rel in MISSING_SUBTREES:
+        path = Path(rel) / "Makefile"
+        if not path.exists():
+            continue
+        lines = path.read_text(errors="ignore").splitlines()
+        out = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("obj-y") or stripped.startswith("obj-$(CONFIG"):
+                out.append("# " + stripped + "   # disabled: incomplete vendor source")
+            else:
+                out.append(line)
+        path.write_text("\n".join(out) + "\n")
+        print("disabled vendor subtree:", rel)
+
+
 def patch_warnings() -> None:
     path = Path("Makefile")
     lines = path.read_text().splitlines()
     if any(line.strip() == "KBUILD_CFLAGS += -Wno-error" for line in lines):
         return
-    path.write_text(WARN_OVERRIDES + "\n" + "\n".join(lines) + "\n")
+    prefix = (
+        "KBUILD_CFLAGS += -Wno-error\n"
+        "KBUILD_CFLAGS += -Wno-error=strict-prototypes "
+        "-Wno-error=int-conversion -Wno-error=implicit-int "
+        "-Wno-error=unused-but-set-variable\n"
+    )
+    path.write_text(prefix + "\n" + "\n".join(lines) + "\n")
     print("prefixed global -Wno-error overrides")
 
 
@@ -66,18 +93,26 @@ def patch_defconfig() -> None:
             "CONFIG_LTO_CLANG_FULL=",
             "CONFIG_CFI_CLANG=",
             "CONFIG_CFI_CLANG_SHADOW=",
+            "CONFIG_MODULE_SIG",
+            "CONFIG_SYSTEM_TRUSTED_KEYS",
+            "CONFIG_SYSTEM_REVOCATION_KEYS",
         )):
-            out.append("# " + line.split("=", 1)[0] + " is not set")
+            key = line.split("=", 1)[0]
+            if key in ("CONFIG_SYSTEM_TRUSTED_KEYS", "CONFIG_SYSTEM_REVOCATION_KEYS"):
+                out.append(key + '=""')
+            else:
+                out.append("# " + key + " is not set")
         elif line.startswith("# CONFIG_LTO_NONE"):
             out.append("CONFIG_LTO_NONE=y")
         else:
             out.append(line)
     path.write_text("\n".join(out) + "\n")
-    print("patched defconfig LTO/CFI")
+    print("patched defconfig LTO/CFI/signing")
 
 
 if __name__ == "__main__":
     patch_clang_version()
     patch_pgo()
+    patch_missing_subtrees()
     patch_warnings()
     patch_defconfig()
