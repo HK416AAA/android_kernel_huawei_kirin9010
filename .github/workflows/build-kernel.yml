@@ -57,14 +57,14 @@ jobs:
 
       - name: Build kernel
         run: |
-          set -euo pipefail
+          set -o pipefail
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r487747c/bin:$PATH"
           rm -rf out
           mkdir -p out
-          make O=out merge_8425m_defconfig
-          make O=out -j8
+          make O=out merge_8425m_defconfig 2>&1 | tee out/build.log
+          make O=out -j8 2>&1 | tee -a out/build.log
           test -s out/arch/arm64/boot/Image.gz
 
       - name: Upload artifacts
@@ -76,4 +76,5 @@ jobs:
             out/arch/arm64/boot/Image.gz
             out/System.map
             out/.config
+            out/build.log
           if-no-files-found: warn
