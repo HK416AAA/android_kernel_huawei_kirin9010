@@ -29,7 +29,7 @@ jobs:
           path: |
             gcc
             ${{ github.workspace }}/../../prebuilts
-          key: kirin9010-toolchain-r383902b-v1
+          key: kirin9010-toolchain-r468909b-v1
 
       - name: Fetch toolchain
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
@@ -39,12 +39,12 @@ jobs:
             https://github.com/HK416AAA/aarch64-linux-android-4.9.git gcc
           mkdir -p "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git clone --depth 1 --filter=blob:none --sparse \
-            --branch android-11.0.0_r1 \
+            --branch android-13.0.0_r1 \
             https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
             "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git -C "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86" \
-            sparse-checkout set clang-r383902b
-          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r383902b/bin/clang"
+            sparse-checkout set clang-r468909b
+          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r468909b/bin/clang"
 
       - name: Install build dependencies
         run: |
@@ -52,20 +52,20 @@ jobs:
           sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
             device-tree-compiler
 
-      - name: Patch clang version
+      - name: Patch clang/PGO/LTO
         run: python3 scripts/ci_patch.py
 
-      - name: Build kernel (README)
+      - name: Build kernel
         run: |
           set -euo pipefail
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
-          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r383902b/bin:$PATH"
-          rm -rf "$GITHUB_WORKSPACE/../out"
-          mkdir -p "$GITHUB_WORKSPACE/../out"
-          make O="$GITHUB_WORKSPACE/../out" merge_8425m_defconfig
-          make O="$GITHUB_WORKSPACE/../out" -j8
-          test -s "$GITHUB_WORKSPACE/../out/arch/arm64/boot/Image.gz"
+          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r468909b/bin:$PATH"
+          rm -rf out
+          mkdir -p out
+          make O=out merge_8425m_defconfig
+          make O=out -j8
+          test -s out/arch/arm64/boot/Image.gz
 
       - name: Upload artifacts
         if: always()
@@ -73,7 +73,7 @@ jobs:
         with:
           name: kernel
           path: |
-            ${{ github.workspace }}/../out/arch/arm64/boot/Image.gz
-            ${{ github.workspace }}/../out/System.map
-            ${{ github.workspace }}/../out/.config
+            out/arch/arm64/boot/Image.gz
+            out/System.map
+            out/.config
           if-no-files-found: warn
