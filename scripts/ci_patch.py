@@ -1,6 +1,6 @@
 from pathlib import Path
 
-CLANG = "clang-r468909b"
+CLANG = "clang-r487747c"
 
 
 def is_build_file(path: Path) -> bool:
@@ -18,7 +18,7 @@ def patch_clang_version() -> None:
             continue
         new = text
         for old in ("clang-r416183b1", "clang-r353983c", "clang-r365631c",
-                    "clang-r383902b"):
+                    "clang-r383902b", "clang-r468909b"):
             new = new.replace(old, CLANG)
         if new != text:
             path.write_text(new)
