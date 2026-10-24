@@ -13,8 +13,8 @@ def patch_clang_version() -> None:
         except OSError:
             continue
         new = text
-        for old in ("clang-r416183b1", "clang-r353983c"):
-            new = new.replace(old, "clang-r365631c")
+        for old in ("clang-r416183b1", "clang-r353983c", "clang-r365631c"):
+            new = new.replace(old, "clang-r383902b")
         if new != text:
             path.write_text(new)
             print("patched clang version:", path)
