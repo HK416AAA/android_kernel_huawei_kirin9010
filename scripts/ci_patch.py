@@ -1,6 +1,10 @@
 from pathlib import Path
 
 CLANG = "clang-r487747c"
+WARN_OVERRIDES = (
+    "KBUILD_CFLAGS += -Wno-error=strict-prototypes "
+    "-Wno-error=int-conversion -Wno-error=implicit-int\n"
+)
 
 
 def is_build_file(path: Path) -> bool:
@@ -42,6 +46,16 @@ def patch_pgo() -> None:
         print("removed PGO:", path)
 
 
+def patch_warnings() -> None:
+    path = Path("Makefile")
+    text = path.read_text()
+    if "Wno-error=strict-prototypes" in text:
+        return
+    text = text.rstrip() + "\n\n" + WARN_OVERRIDES
+    path.write_text(text)
+    print("added warning overrides")
+
+
 def patch_defconfig() -> None:
     path = Path("arch/arm64/configs/merge_8425m_defconfig")
     out = []
@@ -65,4 +79,5 @@ def patch_defconfig() -> None:
 if __name__ == "__main__":
     patch_clang_version()
     patch_pgo()
+    patch_warnings()
     patch_defconfig()
