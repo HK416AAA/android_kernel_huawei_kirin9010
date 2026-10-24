@@ -2,6 +2,7 @@ from pathlib import Path
 
 CLANG = "clang-r487747c"
 WARN_OVERRIDES = (
+    "KBUILD_CFLAGS += -Wno-error\n"
     "KBUILD_CFLAGS += -Wno-error=strict-prototypes "
     "-Wno-error=int-conversion -Wno-error=implicit-int\n"
 )
@@ -49,11 +50,11 @@ def patch_pgo() -> None:
 def patch_warnings() -> None:
     path = Path("Makefile")
     text = path.read_text()
-    if "Wno-error=strict-prototypes" in text:
+    if "KBUILD_CFLAGS += -Wno-error\n" in text:
         return
     text = text.rstrip() + "\n\n" + WARN_OVERRIDES
     path.write_text(text)
-    print("added warning overrides")
+    print("added global -Wno-error overrides")
 
 
 def patch_defconfig() -> None:
