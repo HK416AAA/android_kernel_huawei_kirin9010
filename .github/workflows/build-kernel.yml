@@ -29,7 +29,7 @@ jobs:
           path: |
             gcc
             ${{ github.workspace }}/../../prebuilts
-          key: kirin9010-readme-toolchain-v1
+          key: kirin9010-readme-toolchain-v2
 
       - name: Fetch toolchain
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
@@ -52,6 +52,9 @@ jobs:
           sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
             device-tree-compiler
 
+      - name: Patch clang version per README
+        run: python3 scripts/ci_patch.py
+
       - name: Build kernel (README)
         run: |
           set -euo pipefail
@@ -70,7 +73,7 @@ jobs:
         with:
           name: kernel
           path: |
-            ${{ github.workspace }}/../out/arch/arm64/boot/Image.gz
-            ${{ github.workspace }}/../out/System.map
-            ${{ github.workspace }}/../out/.config
+            out/arch/arm64/boot/Image.gz
+            out/System.map
+            out/.config
           if-no-files-found: warn
