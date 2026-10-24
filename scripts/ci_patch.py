@@ -21,31 +21,21 @@ def patch_defconfig() -> None:
     path.write_text("\n".join(out) + "\n")
 
 
-def patch_all_makefiles() -> None:
+def patch_makefile_conditional() -> None:
+    path = Path("Makefile")
+    lines = path.read_text().splitlines()
+    out = []
     changed = 0
-    for path in Path(".").rglob("*"):
-        if not path.is_file():
-            continue
-        if not (path.name == "Makefile" or path.name == "Kbuild"
-                or path.name.startswith("Makefile.")
-                or path.suffix == ".mk"):
-            continue
-        try:
-            text = path.read_text(errors="ignore")
-        except OSError:
-            continue
-        if "-fprofile-use" not in text and "--symbol-ordering-file" not in text:
-            continue
-        lines = text.splitlines()
-        keep = [
-            line for line in lines
-            if "-fprofile-use" not in line
-            and "--symbol-ordering-file" not in line
-        ]
-        path.write_text("\n".join(keep) + "\n")
-        changed += 1
-        print("patched", path)
-    print("patched files:", changed)
+    for line in lines:
+        if "-fprofile-use=" in line or "--symbol-ordering-file=" in line:
+            out.append("ifneq ($(wildcard $(srctree)/../../vendor/hisi/bin/pgo),)")
+            out.append(line)
+            out.append("endif")
+            changed += 1
+        else:
+            out.append(line)
+    path.write_text("\n".join(out) + "\n")
+    print("Makefile PGO lines wrapped:", changed)
 
 
 def patch_display() -> None:
@@ -61,5 +51,5 @@ def patch_display() -> None:
 
 if __name__ == "__main__":
     patch_defconfig()
-    patch_all_makefiles()
+    patch_makefile_conditional()
     patch_display()
