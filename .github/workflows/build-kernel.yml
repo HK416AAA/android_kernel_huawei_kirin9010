@@ -53,10 +53,7 @@ jobs:
             device-tree-compiler
 
       - name: Patch clang/PGO/LTO
-        run: |
-          python3 scripts/ci_patch.py
-          head -5 Makefile
-          grep -n "Wno-error" Makefile | head -5 || true
+        run: python3 scripts/ci_patch.py
 
       - name: Build kernel
         run: |
@@ -66,10 +63,11 @@ jobs:
           export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r487747c/bin:$PATH"
           rm -f build-*.log
           LOG="build-${GITHUB_RUN_ID}.log"
+          WARN="-Wno-error -Wno-error=strict-prototypes -Wno-error=int-conversion -Wno-error=implicit-int"
           rm -rf out
           mkdir -p out
           make O=out merge_8425m_defconfig 2>&1 | tee "$LOG"
-          make O=out -k -j8 V=1 2>&1 | tee -a "$LOG"
+          make O=out -k -j8 V=1 KCFLAGS="$WARN" 2>&1 | tee -a "$LOG"
           test -s out/arch/arm64/boot/Image.gz
 
       - name: Upload artifacts
