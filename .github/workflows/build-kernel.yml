@@ -53,7 +53,9 @@ jobs:
             device-tree-compiler
 
       - name: Patch clang/PGO/LTO
-        run: python3 scripts/ci_patch.py
+        run: |
+          python3 scripts/ci_patch.py
+          grep -n "clang-r\|fprofile-use\|symbol-ordering" Makefile || true
 
       - name: Build kernel
         run: |
