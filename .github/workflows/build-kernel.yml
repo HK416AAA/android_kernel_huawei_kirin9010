@@ -56,12 +56,26 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache
-          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}-v2
+          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}-v3
           restore-keys: |
             kirin9010-ccache-
 
       - name: Patch repo-only config
         run: python3 scripts/ci_patch.py
+
+      - name: Debug compile command
+        run: |
+          set -euo pipefail
+          export ARCH=arm64
+          export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
+          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          rm -rf out-debug
+          mkdir -p out-debug
+          make O=out-debug merge_8425m_defconfig >/dev/null 2>&1 || true
+          make O=out-debug V=1 scripts/mod/empty.o 2>&1 | tee out-debug/verbose.log || true
+          grep -n "fprofile-use" out-debug/verbose.log | head -20 || true
 
       - name: Build Image
         run: |
@@ -92,4 +106,5 @@ jobs:
             out/System.map
             out/.config
             out/build.log
+            out-debug/verbose.log
           if-no-files-found: warn
