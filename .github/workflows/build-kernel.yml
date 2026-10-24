@@ -29,7 +29,7 @@ jobs:
           path: |
             gcc
             ${{ github.workspace }}/../../prebuilts
-          key: kirin9010-toolchain-r365631c-v2
+          key: kirin9010-toolchain-r383902b-v1
 
       - name: Fetch toolchain
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
@@ -43,8 +43,8 @@ jobs:
             https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
             "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git -C "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86" \
-            sparse-checkout set clang-r365631c
-          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r365631c/bin/clang"
+            sparse-checkout set clang-r383902b
+          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r383902b/bin/clang"
 
       - name: Install build dependencies
         run: |
@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
-          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r365631c/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r383902b/bin:$PATH"
           rm -rf "$GITHUB_WORKSPACE/../out"
           mkdir -p "$GITHUB_WORKSPACE/../out"
           make O="$GITHUB_WORKSPACE/../out" merge_8425m_defconfig
