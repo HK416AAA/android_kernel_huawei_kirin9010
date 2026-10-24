@@ -1,6 +1,22 @@
 from pathlib import Path
 
 
+def patch_clang_version() -> None:
+    for path in Path(".").rglob("*"):
+        if not path.is_file():
+            continue
+        if not (path.name == "Makefile" or path.name.startswith("Makefile.")
+                or path.name == "Kbuild" or path.suffix == ".mk"):
+            continue
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        if "clang-r416183b1" in text:
+            path.write_text(text.replace("clang-r416183b1", "clang-r353983c"))
+            print("patched clang version:", path)
+
+
 def patch_defconfig() -> None:
     path = Path("arch/arm64/configs/merge_8425m_defconfig")
     lines = path.read_text().splitlines()
@@ -21,35 +37,6 @@ def patch_defconfig() -> None:
     path.write_text("\n".join(out) + "\n")
 
 
-def patch_makefile_conditional() -> None:
-    path = Path("Makefile")
-    lines = path.read_text().splitlines()
-    out = []
-    changed = 0
-    for line in lines:
-        if "-fprofile-use=" in line or "--symbol-ordering-file=" in line:
-            out.append("ifneq ($(wildcard $(srctree)/../../vendor/hisi/bin/pgo),)")
-            out.append(line)
-            out.append("endif")
-            changed += 1
-        else:
-            out.append(line)
-    path.write_text("\n".join(out) + "\n")
-    print("Makefile PGO lines wrapped:", changed)
-
-
-def patch_display() -> None:
-    for name in (
-        "platform_source/display/drivers/dpu_drm/Makefile",
-        "platform_source/display/drivers/dpu_drm/heap/Makefile",
-    ):
-        path = Path(name)
-        if path.exists():
-            path.write_text(path.read_text().replace(
-                "-I$(srctree)/../../vendor/hisi/ap/kernel/include", ""))
-
-
 if __name__ == "__main__":
+    patch_clang_version()
     patch_defconfig()
-    patch_makefile_conditional()
-    patch_display()
