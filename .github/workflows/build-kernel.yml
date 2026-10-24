@@ -52,8 +52,19 @@ jobs:
           sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
             device-tree-compiler
 
-      - name: Patch clang/PGO/LTO
-        run: python3 scripts/ci_patch.py
+      - name: Patch clang/PGO/vendor
+        run: |
+          set -euo pipefail
+          python3 scripts/ci_patch.py
+          echo "=== drivers/Makefile vendor_stubs ==="
+          grep -n "vendor_stubs" drivers/Makefile || true
+          echo "=== vendor_stubs.c ==="
+          ls -l drivers/vendor_stubs.c
+          echo "=== platform_source obj-y (first 10) ==="
+          grep -n "obj-y" platform_source/Makefile | head -10 || true
+          echo "=== drivers/Makefile vendor obj-y (first 20) ==="
+          grep -nE "obj-y \+= (connectivity|hwnet|hwpower|huawei_platform|dubai|iomt_host|sim_adapt)" \
+            drivers/Makefile || true
 
       - name: Build kernel
         run: |
@@ -66,9 +77,14 @@ jobs:
           WARN="-Wno-error -Wno-error=strict-prototypes -Wno-error=int-conversion -Wno-error=implicit-int -Wno-error=unused-but-set-variable"
           rm -rf out
           mkdir -p out
+          echo "=== defconfig ==="
           make O=out merge_8425m_defconfig 2>&1 | tee "$LOG"
+          echo "=== compile ==="
           make O=out -k -j8 V=1 KCFLAGS="$WARN" 2>&1 | tee -a "$LOG"
-          test -s out/arch/arm64/boot/Image.gz
+          echo "=== outputs ==="
+          ls -l out/arch/arm64/boot/Image.gz out/vmlinux 2>&1 || true
+          echo "=== undefined symbols in log ==="
+          grep -c "undefined symbol" "$LOG" || true
 
       - name: Upload artifacts
         if: always()
