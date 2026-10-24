@@ -2,8 +2,8 @@ from pathlib import Path
 
 CLANG = "clang-r487747c"
 STUBS = r"""/* Weak stubs for vendor-only symbols whose sources are absent in the
- * open-source package. The corresponding callers stay in place; at runtime
- * these paths are only reachable when the vendor firmware/SEE is present.
+ * open-source package. Callers stay in place; these paths are only reachable
+ * when the vendor firmware/SEE is present.
  */
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -100,8 +100,7 @@ def patch_missing_subtrees() -> None:
 
 
 def patch_stubs() -> None:
-    path = Path("drivers/vendor_stubs.c")
-    path.write_text(STUBS)
+    Path("drivers/vendor_stubs.c").write_text(STUBS)
     makefile = Path("drivers/Makefile")
     text = makefile.read_text()
     if "vendor_stubs.o" not in text:
@@ -119,9 +118,10 @@ def patch_warnings() -> None:
         "KBUILD_CFLAGS += -Wno-error=strict-prototypes "
         "-Wno-error=int-conversion -Wno-error=implicit-int "
         "-Wno-error=unused-but-set-variable\n"
+        "KBUILD_CFLAGS += -fno-stack-protector\n"
     )
     path.write_text(prefix + "\n" + "\n".join(lines) + "\n")
-    print("prefixed global -Wno-error overrides")
+    print("prefixed -Wno-error / -fno-stack-protector")
 
 
 def patch_defconfig() -> None:
@@ -137,6 +137,7 @@ def patch_defconfig() -> None:
             "CONFIG_MODULE_SIG",
             "CONFIG_SYSTEM_TRUSTED_KEYS",
             "CONFIG_SYSTEM_REVOCATION_KEYS",
+            "CONFIG_STACKPROTECTOR",
         )):
             key = line.split("=", 1)[0]
             if key in ("CONFIG_SYSTEM_TRUSTED_KEYS", "CONFIG_SYSTEM_REVOCATION_KEYS"):
@@ -148,7 +149,7 @@ def patch_defconfig() -> None:
         else:
             out.append(line)
     path.write_text("\n".join(out) + "\n")
-    print("patched defconfig LTO/CFI/signing")
+    print("patched defconfig LTO/CFI/signing/stackprotector")
 
 
 if __name__ == "__main__":
