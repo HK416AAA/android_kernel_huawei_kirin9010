@@ -29,7 +29,7 @@ jobs:
           path: |
             gcc
             ${{ github.workspace }}/../../prebuilts
-          key: kirin9010-toolchain-v1
+          key: kirin9010-readme-toolchain-v1
 
       - name: Fetch toolchain
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
@@ -39,62 +39,30 @@ jobs:
             https://github.com/HK416AAA/aarch64-linux-android-4.9.git gcc
           mkdir -p "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git clone --depth 1 --filter=blob:none --sparse \
-            --branch android-12.0.0_r1 \
+            --branch android-10.0.0_r1 \
             https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
             "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git -C "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86" \
-            sparse-checkout set clang-r416183b1
-          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin/clang"
+            sparse-checkout set clang-r353983c
+          ls -l "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r353983c/bin/clang"
 
       - name: Install build dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq bison flex libssl-dev libelf-dev bc \
-            device-tree-compiler ccache
+            device-tree-compiler
 
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: .ccache
-          key: kirin9010-ccache-${{ hashFiles('arch/arm64/configs/merge_8425m_defconfig') }}-v3
-          restore-keys: |
-            kirin9010-ccache-
-
-      - name: Patch repo-only config
-        run: python3 scripts/ci_patch.py
-
-      - name: Debug compile command
+      - name: Build kernel (README)
         run: |
           set -euo pipefail
           export ARCH=arm64
           export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
-          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
-          export CC=clang
-          export CLANG_TRIPLE=aarch64-linux-gnu-
-          rm -rf out-debug
-          mkdir -p out-debug
-          make O=out-debug merge_8425m_defconfig >/dev/null 2>&1 || true
-          make O=out-debug V=1 scripts/mod/empty.o 2>&1 | tee out-debug/verbose.log || true
-          grep -n "fprofile-use" out-debug/verbose.log | head -20 || true
-
-      - name: Build Image
-        run: |
-          set -euo pipefail
-          rm -rf out
-          export ARCH=arm64
-          export CROSS_COMPILE="$GITHUB_WORKSPACE/gcc/bin/aarch64-linux-android-"
-          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r416183b1/bin:$PATH"
-          export CC=clang
-          export CLANG_TRIPLE=aarch64-linux-gnu-
-          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-          export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
-          export CCACHE_COMPILERCHECK=content
-          export CCACHE_MAXSIZE=5G
-          mkdir -p out
-          make O=out merge_8425m_defconfig 2>&1 | tee out/build.log
-          make O=out -j"$(nproc)" CC="ccache clang" HOSTCC="ccache clang" \
-            Image 2>&1 | tee -a out/build.log
-          test -s out/arch/arm64/boot/Image
+          export PATH="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r353983c/bin:$PATH"
+          rm -rf "$GITHUB_WORKSPACE/../out"
+          mkdir -p "$GITHUB_WORKSPACE/../out"
+          make O="$GITHUB_WORKSPACE/../out" merge_8425m_defconfig
+          make O="$GITHUB_WORKSPACE/../out" -j8
+          test -s "$GITHUB_WORKSPACE/../out/arch/arm64/boot/Image.gz"
 
       - name: Upload artifacts
         if: always()
@@ -102,9 +70,7 @@ jobs:
         with:
           name: kernel
           path: |
-            out/arch/arm64/boot/Image
-            out/System.map
-            out/.config
-            out/build.log
-            out-debug/verbose.log
+            ${{ github.workspace }}/../out/arch/arm64/boot/Image.gz
+            ${{ github.workspace }}/../out/System.map
+            ${{ github.workspace }}/../out/.config
           if-no-files-found: warn
