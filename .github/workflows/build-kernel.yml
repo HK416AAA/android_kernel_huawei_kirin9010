@@ -29,7 +29,7 @@ jobs:
           path: |
             gcc
             ${{ github.workspace }}/../../prebuilts
-          key: kirin9010-toolchain-r365631c-v1
+          key: kirin9010-toolchain-r365631c-v2
 
       - name: Fetch toolchain
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
@@ -39,7 +39,7 @@ jobs:
             https://github.com/HK416AAA/aarch64-linux-android-4.9.git gcc
           mkdir -p "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git clone --depth 1 --filter=blob:none --sparse \
-            --branch android-10.0.0_r1 \
+            --branch android-11.0.0_r1 \
             https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
             "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86"
           git -C "$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86" \
