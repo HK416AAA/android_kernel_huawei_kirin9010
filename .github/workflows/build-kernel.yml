@@ -93,6 +93,7 @@ jobs:
           ls -l out/arch/arm64/boot/Image.gz out/vmlinux 2>&1 || true
           echo "=== undefined symbols in log ==="
           grep -c "undefined symbol" "$LOG" || true
+          test -s out/arch/arm64/boot/Image.gz
 
       - name: Upload artifacts
         if: always()
