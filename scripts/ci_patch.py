@@ -4,6 +4,7 @@ CLANG = "clang-r487747c"
 VENDOR_DRIVERS = (
     "connectivity", "hwnet", "hwpower", "huawei_platform",
     "dubai", "iomt_host", "sim_adapt", "emcom", "hid", "media",
+    "platform_drivers", "devkit", "usb", "staging",
 )
 STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
  * open-source package.
