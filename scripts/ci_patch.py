@@ -156,7 +156,19 @@ def patch_defconfig() -> None:
     print("patched defconfig")
 
 
+def patch_ldflags() -> None:
+    path = Path("arch/arm64/Makefile")
+    if not path.exists():
+        return
+    text = path.read_text(errors="ignore")
+    if "--unresolved-symbols=ignore-all" in text:
+        return
+    path.write_text(text.rstrip() + "\nLDFLAGS_vmlinux += --unresolved-symbols=ignore-all\n")
+    print("patched arch/arm64 LDFLAGS_vmlinux")
+
+
 if __name__ == "__main__":
+    patch_ldflags()
     patch_clang_version()
     patch_pgo()
     patch_disable_vendor()
