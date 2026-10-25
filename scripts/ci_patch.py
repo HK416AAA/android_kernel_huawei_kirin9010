@@ -15,9 +15,9 @@ STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in 
 #include <linux/init.h>
 #include <linux/module.h>
 
-#define WEAK_VOID(name) void name(void) { } EXPORT_SYMBOL(name)
-#define WEAK_INT(name) int name(void) { return 0; } EXPORT_SYMBOL(name)
-#define WEAK_UL(name) unsigned long name(void) { return 0; } EXPORT_SYMBOL(name)
+#define WEAK_VOID(name) void name(void) { } EXPORT_SYMBOL(name);
+#define WEAK_INT(name) int name(void) { return 0; } EXPORT_SYMBOL(name);
+#define WEAK_UL(name) unsigned long name(void) { return 0; } EXPORT_SYMBOL(name);
 
 WEAK_VOID(register_sr_mntn)
 WEAK_VOID(wait_dsp_load_completion_timeout)
