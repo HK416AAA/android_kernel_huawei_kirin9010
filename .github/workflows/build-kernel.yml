@@ -80,10 +80,15 @@ jobs:
           echo "=== defconfig ==="
           make O=out merge_8425m_defconfig 2>&1 | tee "$LOG"
           echo "=== compile ==="
-          LD_BIN="$GITHUB_WORKSPACE/../../prebuilts/clang/host/linux-x86/clang-r487747c/bin/ld.lld"
-          make O=out -k -j8 V=1 KCFLAGS="$WARN" \
-            LD="$LD_BIN --unresolved-symbols=ignore-all --error-limit=0" \
-            2>&1 | tee -a "$LOG"
+          make O=out -k -j8 V=1 KCFLAGS="$WARN" 2>&1 | tee -a "$LOG" || true
+          if [ ! -s out/arch/arm64/boot/Image.gz ]; then
+            echo "=== generating weak stubs ==="
+            python3 scripts/gen_stubs.py "$LOG"
+            grep -q vendor_stubs2.o init/Makefile || echo "obj-y += vendor_stubs2.o" >> init/Makefile
+            rm -f out/init/vendor_stubs2.o
+            echo "=== relinking ==="
+            make O=out -k -j8 V=1 KCFLAGS="$WARN" 2>&1 | tee -a "$LOG" || true
+          fi
           echo "=== outputs ==="
           ls -l out/arch/arm64/boot/Image.gz out/vmlinux 2>&1 || true
           echo "=== undefined symbols in log ==="
