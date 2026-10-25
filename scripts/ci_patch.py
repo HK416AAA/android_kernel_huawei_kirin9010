@@ -108,12 +108,12 @@ def patch_disable_vendor() -> None:
 
 
 def patch_stubs() -> None:
-    Path("drivers/vendor_stubs.c").write_text(STUBS)
-    makefile = Path("drivers/Makefile")
+    Path("init/vendor_stubs.c").write_text(STUBS)
+    makefile = Path("init/Makefile")
     text = makefile.read_text()
     if "vendor_stubs.o" not in text:
         makefile.write_text(text.rstrip() + "\nobj-y += vendor_stubs.o\n")
-    print("installed drivers/vendor_stubs.c and obj-y entry")
+    print("installed init/vendor_stubs.c and obj-y entry")
 
 
 def patch_warnings() -> None:
