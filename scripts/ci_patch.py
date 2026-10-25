@@ -1,15 +1,31 @@
 from pathlib import Path
 
 CLANG = "clang-r487747c"
+
+# Vendor subtrees under drivers/ that are safe to drop (not used by the
+# boot/UEFI path). Core drivers (usb, media, hid, gpu, opp, devfreq) stay.
 VENDOR_DRIVERS = (
     "connectivity", "hwnet", "hwpower", "huawei_platform",
-    "dubai", "iomt_host", "sim_adapt", "emcom", "hid", "media",
-    "platform_drivers", "devkit", "usb", "staging",
-    "hwmemcheck", "cpuload", "devfreq", "gpu", "opp",
+    "dubai", "iomt_host", "sim_adapt", "emcom",
     "reclaim_acct", "mdmbuf", "mntn", "hwevent",
+    "platform_drivers", "devkit", "hwmemcheck", "cpuload",
 )
-STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
- * open-source package.
+
+# Leaf directories inside platform_source whose sources are missing from the
+# open-source package. platform_source itself stays enabled so its see/hck
+# hooks (used by core kernel code) are still built.
+MISSING_LEAVES = (
+    "platform_source/cee/drivers/heca",
+    "platform_source/cee/drivers/pm/main",
+    "platform_source/see/drivers/bl31_hibernate",
+    "platform_source/see/drivers/hhee",
+    "platform_source/basicplatform/drivers/rpmb",
+    "platform_source/audio/drivers/hifi_dsp",
+    "platform_source/basicplatform/drivers/clk/extreme/platform",
+)
+
+STUBS = r"""/* Stubs for vendor-only symbols whose sources are absent from the
+ * open-source package (missing leaf directories).
  */
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -38,6 +54,13 @@ WEAK_INT(hhee_check_enable)
 WEAK_INT(heca_get_next_freq)
 WEAK_INT(heca_cpu_enable)
 WEAK_VOID(heca_unregister_dev_freq_notifier)
+WEAK_INT(heca_get_kernel_freq)
+WEAK_VOID(heca_context_switch)
+WEAK_VOID(hibernate_get_slot)
+WEAK_VOID(hhee_hibernate_freeze)
+WEAK_VOID(hhee_hibernate_restore)
+WEAK_VOID(bl31_hibernate_freeze)
+WEAK_VOID(bl31_hibernate_restore)
 """
 
 
@@ -80,31 +103,36 @@ def patch_pgo() -> None:
         print("removed PGO:", path)
 
 
-def patch_disable_vendor() -> None:
-    ps = Path("platform_source/Makefile")
-    if ps.exists():
+def patch_missing_leaves() -> None:
+    for rel in MISSING_LEAVES:
+        path = Path(rel) / "Makefile"
+        if not path.exists():
+            continue
         out = []
-        for line in ps.read_text(errors="ignore").splitlines():
+        for line in path.read_text(errors="ignore").splitlines():
             stripped = line.strip()
             if stripped.startswith(("obj-y", "obj-$(CONFIG", "obj-m")):
-                out.append("# " + stripped + "   # disabled: vendor tree incomplete")
+                out.append("# " + stripped + "   # disabled: missing vendor source")
             else:
                 out.append(line)
-        ps.write_text("\n".join(out) + "\n")
-        print("disabled platform_source")
+        path.write_text("\n".join(out) + "\n")
+        print("disabled leaf:", rel)
 
+
+def patch_disable_vendor_drivers() -> None:
     drv = Path("drivers/Makefile")
-    if drv.exists():
-        out = []
-        for line in drv.read_text(errors="ignore").splitlines():
-            stripped = line.strip()
-            if stripped.startswith(("obj-y", "obj-$(CONFIG", "obj-m")) and \
-                    any(name + "/" in stripped for name in VENDOR_DRIVERS):
-                out.append("# " + stripped + "   # disabled: vendor driver")
-            else:
-                out.append(line)
-        drv.write_text("\n".join(out) + "\n")
-        print("disabled vendor drivers")
+    if not drv.exists():
+        return
+    out = []
+    for line in drv.read_text(errors="ignore").splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("obj-y", "obj-$(CONFIG", "obj-m")) and \
+                any(name + "/" in stripped for name in VENDOR_DRIVERS):
+            out.append("# " + stripped + "   # disabled: vendor driver")
+        else:
+            out.append(line)
+    drv.write_text("\n".join(out) + "\n")
+    print("disabled vendor drivers")
 
 
 def patch_stubs() -> None:
@@ -113,7 +141,7 @@ def patch_stubs() -> None:
     text = makefile.read_text()
     if "vendor_stubs.o" not in text:
         makefile.write_text(text.rstrip() + "\nobj-y += vendor_stubs.o\n")
-    print("installed init/vendor_stubs.c and obj-y entry")
+    print("installed init/vendor_stubs.c")
 
 
 def patch_warnings() -> None:
@@ -127,7 +155,6 @@ def patch_warnings() -> None:
         "-Wno-error=int-conversion -Wno-error=implicit-int "
         "-Wno-error=unused-but-set-variable\n"
         "KBUILD_CFLAGS += -fno-stack-protector\n"
-        "KBUILD_LDFLAGS += --unresolved-symbols=ignore-all\n"
     )
     path.write_text(prefix + "\n" + "\n".join(lines) + "\n")
     print("prefixed -Wno-error / -fno-stack-protector")
@@ -156,22 +183,23 @@ def patch_defconfig() -> None:
     print("patched defconfig")
 
 
-def patch_ldflags() -> None:
+def patch_ldflags_cleanup() -> None:
     path = Path("arch/arm64/Makefile")
     if not path.exists():
         return
     text = path.read_text(errors="ignore")
     if "--unresolved-symbols=ignore-all" in text:
-        return
-    path.write_text(text.rstrip() + "\nLDFLAGS_vmlinux += --unresolved-symbols=ignore-all\n")
-    print("patched arch/arm64 LDFLAGS_vmlinux")
+        text = text.replace("LDFLAGS_vmlinux += --unresolved-symbols=ignore-all\n", "")
+        path.write_text(text)
+        print("removed ignore-all LDFLAGS")
 
 
 if __name__ == "__main__":
-    patch_ldflags()
+    patch_ldflags_cleanup()
     patch_clang_version()
     patch_pgo()
-    patch_disable_vendor()
+    patch_missing_leaves()
+    patch_disable_vendor_drivers()
     patch_stubs()
     patch_warnings()
     patch_defconfig()
