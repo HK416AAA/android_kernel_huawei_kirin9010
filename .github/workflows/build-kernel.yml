@@ -89,6 +89,10 @@ jobs:
             echo "=== relinking ==="
             make O=out -k -j8 V=1 KCFLAGS="$WARN" 2>&1 | tee -a "$LOG" || true
           fi
+          if [ -s out/vmlinux ]; then
+            echo "=== building Image.gz ==="
+            make O=out ARCH=arm64 -j"$(nproc)" Image.gz 2>&1 | tee -a "$LOG" || true
+          fi
           echo "=== outputs ==="
           ls -l out/arch/arm64/boot/Image.gz out/vmlinux 2>&1 || true
           echo "=== undefined symbols in log ==="
