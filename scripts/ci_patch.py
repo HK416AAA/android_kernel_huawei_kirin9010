@@ -1,6 +1,10 @@
 from pathlib import Path
 
 CLANG = "clang-r487747c"
+VENDOR_DRIVERS = (
+    "connectivity", "hwnet", "hwpower", "huawei_platform",
+    "dubai", "iomt_host", "sim_adapt",
+)
 STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
  * open-source package.
  */
@@ -76,11 +80,10 @@ def patch_pgo() -> None:
 def patch_disable_vendor() -> None:
     ps = Path("platform_source/Makefile")
     if ps.exists():
-        lines = ps.read_text(errors="ignore").splitlines()
         out = []
-        for line in lines:
+        for line in ps.read_text(errors="ignore").splitlines():
             stripped = line.strip()
-            if stripped.startswith("obj-y") or stripped.startswith("obj-$(CONFIG"):
+            if stripped.startswith(("obj-y", "obj-$(CONFIG", "obj-m")):
                 out.append("# " + stripped + "   # disabled: vendor tree incomplete")
             else:
                 out.append(line)
@@ -89,19 +92,16 @@ def patch_disable_vendor() -> None:
 
     drv = Path("drivers/Makefile")
     if drv.exists():
-        lines = drv.read_text(errors="ignore").splitlines()
         out = []
-        for line in lines:
+        for line in drv.read_text(errors="ignore").splitlines():
             stripped = line.strip()
-            if stripped in ("obj-y += connectivity/", "obj-y += hwnet/",
-                            "obj-y += hwpower/", "obj-y += huawei_platform/",
-                            "obj-y += dubai/", "obj-y += iomt_host/",
-                            "obj-y += sim_adapt/"):
+            if stripped.startswith(("obj-y", "obj-$(CONFIG", "obj-m")) and \
+                    any(name + "/" in stripped for name in VENDOR_DRIVERS):
                 out.append("# " + stripped + "   # disabled: vendor driver")
             else:
                 out.append(line)
         drv.write_text("\n".join(out) + "\n")
-        print("disabled vendor drivers")
+        print("disabled vendor drivers (fuzzy match)")
 
 
 def patch_stubs() -> None:
@@ -109,9 +109,8 @@ def patch_stubs() -> None:
     makefile = Path("drivers/Makefile")
     text = makefile.read_text()
     if "vendor_stubs.o" not in text:
-        text = text.rstrip() + "\nobj-y += vendor_stubs.o\n"
-        makefile.write_text(text)
-    print("installed vendor_stubs.o in drivers/Makefile")
+        makefile.write_text(text.rstrip() + "\nobj-y += vendor_stubs.o\n")
+    print("installed vendor_stubs.o")
 
 
 def patch_warnings() -> None:
@@ -135,15 +134,10 @@ def patch_defconfig() -> None:
     out = []
     for line in path.read_text().splitlines():
         if line.startswith((
-            "CONFIG_LTO=",
-            "CONFIG_LTO_CLANG=",
-            "CONFIG_LTO_CLANG_FULL=",
-            "CONFIG_CFI_CLANG=",
-            "CONFIG_CFI_CLANG_SHADOW=",
-            "CONFIG_MODULE_SIG",
-            "CONFIG_SYSTEM_TRUSTED_KEYS",
-            "CONFIG_SYSTEM_REVOCATION_KEYS",
-            "CONFIG_STACKPROTECTOR",
+            "CONFIG_LTO=", "CONFIG_LTO_CLANG=", "CONFIG_LTO_CLANG_FULL=",
+            "CONFIG_CFI_CLANG=", "CONFIG_CFI_CLANG_SHADOW=",
+            "CONFIG_MODULE_SIG", "CONFIG_SYSTEM_TRUSTED_KEYS",
+            "CONFIG_SYSTEM_REVOCATION_KEYS", "CONFIG_STACKPROTECTOR",
         )):
             key = line.split("=", 1)[0]
             if key in ("CONFIG_SYSTEM_TRUSTED_KEYS", "CONFIG_SYSTEM_REVOCATION_KEYS"):
@@ -155,7 +149,7 @@ def patch_defconfig() -> None:
         else:
             out.append(line)
     path.write_text("\n".join(out) + "\n")
-    print("patched defconfig LTO/CFI/signing/stackprotector")
+    print("patched defconfig")
 
 
 if __name__ == "__main__":
