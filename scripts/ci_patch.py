@@ -3,39 +3,8 @@ from pathlib import Path
 CLANG = "clang-r487747c"
 VENDOR_DRIVERS = (
     "connectivity", "hwnet", "hwpower", "huawei_platform",
-    "dubai", "iomt_host", "sim_adapt",
+    "dubai", "iomt_host", "sim_adapt", "emcom",
 )
-STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
- * open-source package.
- */
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/module.h>
-
-#define WEAK_VOID(name) void name(void) { } EXPORT_SYMBOL(name)
-#define WEAK_INT(name) int name(void) { return 0; } EXPORT_SYMBOL(name)
-#define WEAK_UL(name) unsigned long name(void) { return 0; } EXPORT_SYMBOL(name)
-
-WEAK_VOID(register_sr_mntn)
-WEAK_VOID(wait_dsp_load_completion_timeout)
-WEAK_INT(dsp_misc_get_platform_type)
-WEAK_INT(dsp_load_and_verify_image)
-WEAK_VOID(dsp_watchdog_send_event)
-WEAK_UL(om_get_dsp_timestamp)
-WEAK_VOID(dsp_reset_release_syscache)
-WEAK_INT(is_dsp_img_loaded)
-WEAK_INT(get_rpmb_key_status)
-WEAK_INT(get_rpmb_init_status)
-WEAK_INT(rpmb_ufs_init)
-WEAK_VOID(mspc_report_rpmb)
-WEAK_VOID(mspc_exception_to_reset_rpmb)
-WEAK_VOID(hkip_hvc4)
-WEAK_VOID(hkip_hvc3)
-WEAK_INT(hhee_check_enable)
-WEAK_INT(heca_get_next_freq)
-WEAK_INT(heca_cpu_enable)
-WEAK_VOID(heca_unregister_dev_freq_notifier)
-"""
 
 
 def is_build_file(path: Path) -> bool:
@@ -101,16 +70,7 @@ def patch_disable_vendor() -> None:
             else:
                 out.append(line)
         drv.write_text("\n".join(out) + "\n")
-        print("disabled vendor drivers (fuzzy match)")
-
-
-def patch_stubs() -> None:
-    Path("drivers/vendor_stubs.c").write_text(STUBS)
-    makefile = Path("drivers/Makefile")
-    text = makefile.read_text()
-    if "vendor_stubs.o" not in text:
-        makefile.write_text(text.rstrip() + "\nobj-y += vendor_stubs.o\n")
-    print("installed vendor_stubs.o")
+        print("disabled vendor drivers (fuzzy, incl. emcom)")
 
 
 def patch_warnings() -> None:
@@ -156,6 +116,5 @@ if __name__ == "__main__":
     patch_clang_version()
     patch_pgo()
     patch_disable_vendor()
-    patch_stubs()
     patch_warnings()
     patch_defconfig()
