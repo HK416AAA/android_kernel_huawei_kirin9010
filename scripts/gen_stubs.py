@@ -14,5 +14,5 @@ lines = [
 ]
 for name in names:
     lines.append(f"char {name}[64] __attribute__((weak, aligned(8)));")
-Path("init/vendor_stubs.c").write_text("\n".join(lines) + "\n")
-print("generated", len(names), "weak stubs")
+Path("init/vendor_stubs2.c").write_text("\n".join(lines) + "\n")
+print("generated", len(names), "weak stubs in init/vendor_stubs2.c")
