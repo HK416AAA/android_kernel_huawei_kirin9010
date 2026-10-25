@@ -127,6 +127,7 @@ def patch_warnings() -> None:
         "-Wno-error=int-conversion -Wno-error=implicit-int "
         "-Wno-error=unused-but-set-variable\n"
         "KBUILD_CFLAGS += -fno-stack-protector\n"
+        "KBUILD_LDFLAGS += --unresolved-symbols=ignore-all\n"
     )
     path.write_text(prefix + "\n" + "\n".join(lines) + "\n")
     print("prefixed -Wno-error / -fno-stack-protector")
