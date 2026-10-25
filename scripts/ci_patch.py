@@ -3,7 +3,7 @@ from pathlib import Path
 CLANG = "clang-r487747c"
 VENDOR_DRIVERS = (
     "connectivity", "hwnet", "hwpower", "huawei_platform",
-    "dubai", "iomt_host", "sim_adapt", "emcom", "hid",
+    "dubai", "iomt_host", "sim_adapt", "emcom", "hid", "media",
 )
 STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
  * open-source package.
