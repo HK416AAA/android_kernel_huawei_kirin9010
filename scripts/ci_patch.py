@@ -5,6 +5,7 @@ VENDOR_DRIVERS = (
     "connectivity", "hwnet", "hwpower", "huawei_platform",
     "dubai", "iomt_host", "sim_adapt", "emcom", "hid", "media",
     "platform_drivers", "devkit", "usb", "staging",
+    "hwmemcheck", "cpuload", "devfreq", "gpu", "opp",
 )
 STUBS = r"""/* Strong stubs for vendor-only symbols whose sources are absent in the
  * open-source package.
