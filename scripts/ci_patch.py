@@ -188,10 +188,16 @@ def patch_ldflags_cleanup() -> None:
     if not path.exists():
         return
     text = path.read_text(errors="ignore")
+    changed = False
     if "--unresolved-symbols=ignore-all" in text:
         text = text.replace("LDFLAGS_vmlinux += --unresolved-symbols=ignore-all\n", "")
+        changed = True
+    if "--error-limit=0" not in text:
+        text = text.rstrip() + "\nLDFLAGS_vmlinux += --error-limit=0\n"
+        changed = True
+    if changed:
         path.write_text(text)
-        print("removed ignore-all LDFLAGS")
+        print("patched arch/arm64 LDFLAGS_vmlinux (error-limit=0)")
 
 
 if __name__ == "__main__":
