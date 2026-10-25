@@ -56,10 +56,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci_patch.py
-          echo "=== drivers/Makefile vendor_stubs ==="
-          grep -n "vendor_stubs" drivers/Makefile || true
+          echo "=== init/Makefile vendor_stubs ==="
+          grep -n "vendor_stubs" init/Makefile || true
           echo "=== vendor_stubs.c ==="
-          ls -l drivers/vendor_stubs.c
+          ls -l init/vendor_stubs.c
           echo "=== platform_source obj-y (first 10) ==="
           grep -n "obj-y" platform_source/Makefile | head -10 || true
           echo "=== drivers/Makefile vendor obj-y (first 20) ==="
